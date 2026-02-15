@@ -66,7 +66,7 @@ async function sendResponse(channel: DMChannel, response: AgentResponse): Promis
   }
 }
 
-client.once('ready', () => {
+client.once('clientReady', () => {
   console.log(`[discord] Logged in as ${client.user?.tag}`);
 });
 

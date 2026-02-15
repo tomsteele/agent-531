@@ -6,6 +6,24 @@ A 5/3/1 training agent on Discord.
 
 Personal Discord bot and Anthropic SDK agent that builds lifting programs from [Jim Wendler's 5/3/1 templates](https://www.jimwendler.com/products/5-3-1-forever-book).
 
+## Interactions
+
+### Program setup
+
+The agent walks you through setting up a new program — tested 1RMs, template selection, and training schedule.
+
+![Program setup — available templates and 1RM prompt](interactions/1.png)
+
+![Training max calculation and template suggestions](interactions/2.png)
+
+![Final program confirmation with schedule](interactions/3.png)
+
+### Workout delivery
+
+Ask for your workout and the agent pulls the prescribed sets from your current template, week, and training max.
+
+![Workout with main and supplemental sets](interactions/4.png)
+
 ## Deploy
 
 ### 1. Install dependencies

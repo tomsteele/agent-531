@@ -6,6 +6,10 @@ A 5/3/1 training agent on Discord.
 
 Personal Discord bot and Anthropic SDK agent that builds lifting programs from [Jim Wendler's 5/3/1 templates](https://www.jimwendler.com/products/5-3-1-forever-book).
 
+This essentially uses SQLite and a bunch of tool calling.
+
+Interactions with the bot are shown below. Built as an experiment to see if I could create an agent that could help me do something useful other than "sort my email". This does seem useful, and I like being able to use natural language. But, this whole thing could be an API. But! I am tired of building those. I also built similar functionality using a "Skill" that creates a full program and puts it in Notion or gives me clean ASCII I can print out. The downside of the skill is that it's a moment in time, no reminders, training max increases are set, and can't be adjusted without re-using the same chat. The nice thing about a skill is I can design quick programs for other people. Something like "Design a bench press only program for someone with a 1 RM of 215".
+
 ## Interactions
 
 ### Program setup

@@ -12,6 +12,10 @@ Interactions with the bot are shown below. Built as an experiment to see if I co
 
 I also built similar functionality using a "Skill" that creates a full program and puts it in Notion or gives me clean ASCII I can print out. The downside of the skill is that it's a moment in time, no reminders, and training max values are set and can't be adjusted without re-using the same chat. The nice thing about a skill is I can design quick programs for other people. Something like "Design a bench press only program for someone with a 1 RM of 215".
 
+### Potential Improvements
+
+- If there's a workout scheduled for the day, the agent formats and presents it. But this doesn't really need an LLM. If the data is up to date, plain code can format a workout just fine. Saving some tokens.
+
 ## Interactions
 
 ### Program setup

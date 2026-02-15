@@ -15,6 +15,8 @@ I also built similar functionality using a "Skill" that creates a full program a
 ### Potential Improvements
 
 - If there's a workout scheduled for the day, the agent formats and presents it. But this doesn't really need an LLM. If the data is up to date, plain code can format a workout just fine. Saving some tokens.
+- Doesn't handle cycles that are longer than 3 weeks
+- Handle SSL, Windowmaker, etc.
 
 ## Interactions
 

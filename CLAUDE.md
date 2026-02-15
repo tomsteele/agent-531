@@ -51,8 +51,6 @@ A Discord-based training agent built around Jim Wendler's 5/3/1 program. The age
 │   └── original-531.md
 ├── data/                       # SQLite database file lives here
 │   └── training.db
-├── deploy/
-│   └── 531-agent.service       # systemd unit file
 └── docs/
     ├── data-model.md           # Database schema reference
     ├── tool-spec.md            # Tool definitions and behaviors

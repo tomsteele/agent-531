@@ -8,7 +8,7 @@ Personal Discord bot and Anthropic agent SDK that builds lifting programs from [
 
 This essentially uses SQLite and a bunch of tool calling.
 
-Interactions with the bot are shown below. Built as an experiment to see if I could create an agent that could help me do something useful other than "sort my email". This does seem useful, and I like being able to use natural language. Saying "My shoulder hurts, push this to tomorrow" or "Decrease the weight by 5% today" is nice. But, this whole thing could be an API. But! I am tired of building those. I do think this is overkill for the problem. I likely could build a bot with simliar functionality, use some NLP locally, and get similar results.
+Interactions with the bot are shown below. Built as an experiment to see if I could create an agent that could help me do something useful. So far, this seems ok, and I like being able to use natural language. Saying "My shoulder hurts, push this to tomorrow" or "Decrease the weight by 5% today" is nice. But, this whole thing could be an API. But! I am tired of building those. I do think this is overkill for the problem. I likely could build a bot with simliar functionality, use some NLP locally, and get similar results.
 
 I also built similar functionality using a "Skill" that creates a full program and puts it in Notion or gives me clean ASCII I can print out. The downside of the skill is that it's a moment in time, no reminders, and training max values are set and can't be adjusted without re-using the same chat. The nice thing about a skill is I can design quick programs for other people. Something like "Design a bench press only program for someone with a 1 RM of 215".
 

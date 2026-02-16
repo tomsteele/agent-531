@@ -92,13 +92,3 @@ export interface PrescribedSet {
   type?: string;
 }
 
-export interface ToolCallResult {
-  name: string;
-  input: Record<string, unknown>;
-  result: unknown;
-}
-
-export interface AgentResponse {
-  text: string;
-  toolCalls: ToolCallResult[];
-}

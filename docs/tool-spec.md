@@ -2,7 +2,7 @@
 
 ## Overview
 
-These are the tools available to Claude via the Anthropic API's tool use feature. Claude calls these tools during Slack conversations to read and write workout data. Claude handles all conversational logic — interpreting natural language and deciding which tools to call.
+These are the tools available to Claude via an MCP server. Claude calls these tools during Discord conversations to read and write workout data. Claude handles all conversational logic — interpreting natural language and deciding which tools to call.
 
 All tools return JSON responses.
 

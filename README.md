@@ -53,7 +53,7 @@ bun install
 
 ### 2. Configure environment
 
-Create a `.env` file in the project root with your Discord bot token, Anthropic API key, and allowed user ID.
+Create a `.env` file in the project root with your Discord bot token, Anthropic API key (optional), and allowed user ID.
 
 ### 3. Set up systemd user service
 

@@ -1,84 +1,48 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { query } from '@anthropic-ai/claude-agent-sdk';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { toolDefinitions } from './tools/definitions';
-import { handleToolCall } from './tools/handlers';
-import type { AgentResponse, ToolCallResult } from './types';
-
-const client = new Anthropic();
+import { trainingServer } from './tools/mcp-server';
 
 const systemPrompt = readFileSync(join(import.meta.dir, '../docs/system-prompt.md'), 'utf-8');
 
-type Message = Anthropic.MessageParam;
+export interface AgentResponse {
+  text: string;
+  sessionId: string | undefined;
+}
 
-export async function runAgent(userMessage: string, conversationHistory: Message[]): Promise<AgentResponse> {
-  // Add user message to history
-  conversationHistory.push({ role: 'user', content: userMessage });
+export async function runAgent(userMessage: string, sessionId?: string): Promise<AgentResponse> {
+  let resultText = '';
+  let resultSessionId: string | undefined = sessionId;
 
-  const messages = [...conversationHistory];
-  const allToolCalls: ToolCallResult[] = [];
-
-  while (true) {
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      system: systemPrompt,
-      tools: toolDefinitions,
-      messages,
-    });
-
-    // Collect text and tool use blocks
-    const toolUseBlocks = response.content.filter(
-      (block): block is Anthropic.ContentBlock & { type: 'tool_use' } => block.type === 'tool_use'
-    );
-    const textBlocks = response.content.filter(
-      (block): block is Anthropic.TextBlock => block.type === 'text'
-    );
-
-    // If no tool calls, return the text response with tool metadata
-    if (toolUseBlocks.length === 0) {
-      const text = textBlocks.map(b => b.text).join('\n');
-      conversationHistory.push({ role: 'assistant', content: response.content });
-      return { text, toolCalls: allToolCalls };
-    }
-
-    // Process tool calls
-    conversationHistory.push({ role: 'assistant', content: response.content });
-    messages.push({ role: 'assistant', content: response.content });
-
-    const toolResults: Anthropic.ToolResultBlockParam[] = [];
-    for (const toolUse of toolUseBlocks) {
-      console.log(`[agent] tool call: ${toolUse.name}`, JSON.stringify(toolUse.input));
-      try {
-        const result = handleToolCall(toolUse.name, toolUse.input as Record<string, unknown>);
-        console.log(`[agent] tool result:`, JSON.stringify(result));
-        allToolCalls.push({
-          name: toolUse.name,
-          input: toolUse.input as Record<string, unknown>,
-          result,
-        });
-        toolResults.push({
-          type: 'tool_result',
-          tool_use_id: toolUse.id,
-          content: JSON.stringify(result),
-        });
-      } catch (err) {
-        console.error(`[agent] tool error:`, err);
-        allToolCalls.push({
-          name: toolUse.name,
-          input: toolUse.input as Record<string, unknown>,
-          result: { error: String(err) },
-        });
-        toolResults.push({
-          type: 'tool_result',
-          tool_use_id: toolUse.id,
-          content: JSON.stringify({ error: String(err) }),
-          is_error: true,
-        });
+  for await (const message of query({
+    prompt: userMessage,
+    options: {
+      systemPrompt,
+      model: process.env.MODEL ?? 'claude-sonnet-4-20250514',
+      mcpServers: { training: trainingServer },
+      allowedTools: ['mcp__training__*'],
+      permissionMode: 'bypassPermissions',
+      maxTurns: 20,
+      ...(sessionId ? { resume: sessionId } : {}),
+    },
+  })) {
+    if (message.type === 'assistant' && message.message?.content) {
+      for (const block of message.message.content) {
+        if ('name' in block) {
+          console.log(`[agent] tool call: ${block.name}`, JSON.stringify('input' in block ? block.input : ''));
+        }
+      }
+    } else if (message.type === 'result') {
+      resultSessionId = message.session_id;
+      if (message.subtype === 'success') {
+        resultText = message.result ?? '';
+        console.log(`[agent] usage: ${message.num_turns} turns, ${message.total_cost_usd?.toFixed(4)} USD, ${message.duration_ms}ms`, JSON.stringify(message.usage));
+      } else {
+        console.error('[agent] query error:', message.subtype, 'errors' in message ? message.errors : '');
+        resultText = 'Something went wrong processing your message.';
       }
     }
-
-    conversationHistory.push({ role: 'user', content: toolResults });
-    messages.push({ role: 'user', content: toolResults });
   }
+
+  return { text: resultText, sessionId: resultSessionId };
 }

@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { runAgent } from './agent';
-import { sendDM, conversationHistory } from './discord';
+import { sendDM, clearSession, setSessionId } from './discord';
 import { getProgramState } from './tools/state';
 import { getTodaysWorkout } from './tools/workout';
 import { getAvailableTemplates } from './tools/query';
@@ -17,8 +17,8 @@ export function startScheduler(): void {
     const today = new Date().toISOString().split('T')[0];
     console.log(`[scheduler] Firing morning message for ${today}`);
 
-    // Clear conversation history.
-    conversationHistory.length = 0;
+    // Start a fresh session for the new day.
+    clearSession();
 
     try {
       const state = getProgramState();
@@ -42,10 +42,12 @@ export function startScheduler(): void {
           JSON.stringify(workout, null, 2),
         ].join('\n');
 
-        const response = await runAgent(prompt, conversationHistory);
+        const response = await runAgent(prompt);
         if (response.text.trim()) {
-          await sendDM(response);
+          await sendDM(response.text);
         }
+        // Preserve session so user replies have context from the morning message.
+        setSessionId(response.sessionId);
       } else {
         // pending_tm_bump or pending_deload_or_test — agent formats the appropriate prompt
         const parts = [
@@ -60,10 +62,11 @@ export function startScheduler(): void {
           parts.push(``, `Available templates:`, JSON.stringify(templates, null, 2));
         }
 
-        const response = await runAgent(parts.join('\n'), conversationHistory);
+        const response = await runAgent(parts.join('\n'));
         if (response.text.trim()) {
-          await sendDM(response);
+          await sendDM(response.text);
         }
+        setSessionId(response.sessionId);
       }
     } catch (err) {
       console.error('[scheduler] Error running morning agent:', err);

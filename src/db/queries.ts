@@ -23,7 +23,7 @@ export function getSchedule(): Schedule[] {
   return getDb().query('SELECT * FROM schedule ORDER BY id').all() as Schedule[];
 }
 
-export function getLiftForDay(day: DayOfWeek): Lift | null {
+function getLiftForDay(day: DayOfWeek): Lift | null {
   const row = getDb().query('SELECT lift FROM schedule WHERE day_of_week = ?').get(day) as { lift: Lift } | null;
   return row ? row.lift : null;
 }
@@ -90,13 +90,6 @@ export function getWorkoutHistory(lift?: Lift, lastN: number = 10): WorkoutLog[]
   return getDb().query('SELECT * FROM workout_log ORDER BY date DESC, id DESC LIMIT ?').all(lastN) as WorkoutLog[];
 }
 
-export function getWorkoutsForWeek(week: number, phase: Phase, cycleId: number): WorkoutLog[] {
-  return getDb().query(`
-    SELECT * FROM workout_log
-    WHERE week = ? AND phase = ? AND cycle_id = ?
-    ORDER BY date DESC, id DESC
-  `).all(week, phase, cycleId) as WorkoutLog[];
-}
 
 export function getLiftsLoggedThisWeek(week: number, phase: Phase, cycleId: number): Set<Lift> {
   const rows = getDb().query(`

@@ -9,7 +9,7 @@ A Discord-based training agent built around Jim Wendler's 5/3/1 program. The age
 - **Language:** TypeScript
 - **Runtime:** Bun
 - **Messaging:** Discord.js (`discord.js`)
-- **AI:** Anthropic API with tool use (`@anthropic-ai/sdk`)
+- **AI:** Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`)
 - **Database:** SQLite via `bun:sqlite` (built-in)
 - **Scheduler:** Internal timer for daily morning message
 - **Process management:** systemd
@@ -24,7 +24,7 @@ A Discord-based training agent built around Jim Wendler's 5/3/1 program. The age
 ├── src/
 │   ├── index.ts               # Entry point — starts Discord bot and scheduler
 │   ├── discord.ts              # Discord.js client setup, message handlers
-│   ├── agent.ts                # Anthropic API integration, tool dispatch
+│   ├── agent.ts                # Agent SDK query() integration, session management
 │   ├── scheduler.ts            # Morning message timer, checks time and fires daily
 │   ├── db/
 │   │   ├── schema.ts           # SQLite schema setup and migrations
@@ -35,8 +35,7 @@ A Discord-based training agent built around Jim Wendler's 5/3/1 program. The age
 │   │   ├── templates.ts        # Template parser (reads markdown files)
 │   │   └── progression.ts      # Cycle state machine, auto-advance logic
 │   ├── tools/
-│   │   ├── definitions.ts      # Tool definitions for Anthropic API
-│   │   ├── handlers.ts         # Tool call implementations (maps tool names to functions)
+│   │   ├── mcp-server.ts       # MCP server exposing all 21 tools (Zod schemas + handlers)
 │   │   ├── workout.ts          # get_todays_workout, log_workout, skip_lift, skip_week, reschedule_lift
 │   │   ├── state.ts            # get_program_state, advance_week, bump_tm, skip_tm_bump, set_phase, set_template, set_week, set_leader_cycles_completed
 │   │   ├── query.ts            # get_prs, get_training_maxes, get_workout_history, get_available_templates
@@ -59,26 +58,22 @@ A Discord-based training agent built around Jim Wendler's 5/3/1 program. The age
 
 ## Tool Definitions
 
-See `docs/tool-spec.md` for full tool specifications. Tools are defined in Anthropic API tool_use format in `src/tools/definitions.ts`.
+See `docs/tool-spec.md` for full tool specifications. Tools are defined as an MCP server using `createSdkMcpServer()` with Zod schemas in `src/tools/mcp-server.ts`.
 
 ## Agent Integration (src/agent.ts)
 
-The agent function:
-1. Takes a user message (string)
-2. Sends it to the Anthropic API with the system prompt and tool definitions
-3. Handles tool_use responses by dispatching to the appropriate handler
-4. Loops until Claude returns a final text response (multi-turn tool use)
-5. Returns the text response to Slack
+The agent function uses the Claude Agent SDK's `query()` to handle tool dispatch automatically:
+1. Takes a user message (string) and optional session ID
+2. Calls `query()` with the system prompt, MCP server, and session resume
+3. The SDK handles multi-turn tool calls internally via the MCP server
+4. Returns `{ text, sessionId }` — session ID enables multi-turn conversations
 
 ```typescript
-async function runAgent(userMessage: string, conversationHistory: Message[]): Promise<string> {
-  // 1. Build messages array with conversation history
-  // 2. Call Anthropic API with system prompt, tools, messages
-  // 3. While response contains tool_use blocks:
-  //    a. Execute each tool call
-  //    b. Append tool results to messages
-  //    c. Call API again
-  // 4. Return final text response
+async function runAgent(userMessage: string, sessionId?: string): Promise<AgentResponse> {
+  // 1. Call query() with prompt, system prompt, MCP server, and session resume
+  // 2. Iterate messages — SDK dispatches tool calls to MCP server automatically
+  // 3. Extract result text and session ID from the result message
+  // 4. Return { text, sessionId }
 }
 ```
 
@@ -89,9 +84,9 @@ Using discord.js with Gateway (websocket, no public URL needed):
 - Bot connects via Gateway websocket
 - Listen for DMs only — ignore guild messages
 - Filter by allowed user ID — ignore messages from anyone else
-- Pass message text to `runAgent()`
+- Pass message text to `runAgent()` with current session ID
 - Post response back to the DM channel
-- Maintain conversation history in memory (resets on restart, that's fine)
+- Track session ID for multi-turn context (resets on restart, that's fine)
 
 ```typescript
 if (message.author.id !== process.env.ALLOWED_USER_ID) return;

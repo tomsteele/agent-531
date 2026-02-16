@@ -37,6 +37,12 @@ Ask for your workout and the agent pulls the prescribed sets from your current t
 
 ![Workout with main and supplemental sets](interactions/4.png)
 
+### Asking questions
+
+Ask the agent anything about your training and it responds with context from your program state.
+
+![Asking when I'll bench 405](interactions/5.png)
+
 ## Deploy
 
 ### 1. Install dependencies

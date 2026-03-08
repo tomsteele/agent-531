@@ -19,6 +19,8 @@ export function getTodaysWorkout(lift: Lift) {
 		};
 	}
 
+	const trainingMax = liftData.training_max;
+
 	const template = parseTemplate(liftData.active_template);
 	const mainSets = getWeekSets(template, state.current_week, "main");
 	const suppSets = getWeekSets(template, state.current_week, "supplemental");
@@ -28,7 +30,7 @@ export function getTodaysWorkout(lift: Lift) {
 
 	const mainWork: PrescribedSet[] = mainSets.map((s) => ({
 		percentage: s.percentage,
-		weight: calculateWeight(liftData.training_max!, s.percentage),
+		weight: calculateWeight(trainingMax, s.percentage),
 		reps: s.reps,
 	}));
 
@@ -36,7 +38,7 @@ export function getTodaysWorkout(lift: Lift) {
 		const pct = s.type === "FSL" ? fslPercentage : s.percentage;
 		return {
 			percentage: pct,
-			weight: calculateWeight(liftData.training_max!, pct),
+			weight: calculateWeight(trainingMax, pct),
 			reps: s.reps,
 			sets: s.sets,
 			type: s.type,

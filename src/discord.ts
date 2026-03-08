@@ -7,7 +7,7 @@ import {
 } from "discord.js";
 import { runAgent } from "./agent";
 
-const ALLOWED_USER_ID = process.env.ALLOWED_USER_ID!;
+const ALLOWED_USER_ID = process.env.ALLOWED_USER_ID ?? "";
 
 // Session ID replaces conversation history — Agent SDK manages context.
 let currentSessionId: string | undefined;

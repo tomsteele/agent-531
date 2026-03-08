@@ -1,9 +1,9 @@
-import { getDb } from './connection';
+import { getDb } from "./connection";
 
 export function initSchema(): void {
-  const db = getDb();
+	const db = getDb();
 
-  db.run(`
+	db.run(`
     CREATE TABLE IF NOT EXISTS program_state (
       id INTEGER PRIMARY KEY CHECK (id = 1),
       current_week INTEGER NOT NULL DEFAULT 1 CHECK (current_week IN (1, 2, 3)),

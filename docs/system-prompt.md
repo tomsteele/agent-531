@@ -29,8 +29,8 @@ Call `get_program_state()` and evaluate the current status.
 
 **If status is `active`:**
 - Check today's day of the week against the schedule
-- If today is a training day, call `get_todays_workout()` for today's lift
-- Present the workout clearly: lift name, main work (weight x reps for each set), supplemental work
+- If today is a training day, call `get_todays_workout()` for each scheduled lift (a day can have multiple lifts)
+- Present each workout clearly: lift name, main work (weight x reps for each set), supplemental work
 - If today is not a training day, say nothing (don't message on rest days)
 
 ### 2. Present the workout

@@ -38,14 +38,13 @@ export function setSchedule(day: DayOfWeek, lift: string) {
 		};
 	}
 
-	const { previousLiftOnDay, previousDayForLift } = queries.setScheduleEntry(day, lift as Lift);
+	const { previousDayForLift, otherLiftsOnDay } = queries.setScheduleEntry(day, lift as Lift);
 
 	return {
 		day,
 		lift,
-		previous_lift_on_day: previousLiftOnDay,
 		previous_day_for_lift: previousDayForLift,
-		conflict: previousLiftOnDay !== null && previousLiftOnDay !== lift,
+		other_lifts_on_day: otherLiftsOnDay.length > 0 ? otherLiftsOnDay : undefined,
 	};
 }
 

@@ -2,7 +2,16 @@ import { createSdkMcpServer, tool } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 import type { ActualSet, DayOfWeek, Lift, Phase } from "../types";
 import * as Giphy from "./gif";
-import { getAvailableTemplates, getPRs, getTrainingMaxes, getWorkoutHistory } from "./query";
+import {
+	getAvailableTemplates,
+	getCompletionStats,
+	getE1rmHistory,
+	getPRs,
+	getTmHistory,
+	getTrainingMaxes,
+	getVolume,
+	getWorkoutHistory,
+} from "./query";
 import { resetProgram, setSchedule, setTested1rm } from "./setup";
 import {
 	advanceWeek,
@@ -219,6 +228,55 @@ export const trainingServer = createSdkMcpServer({
 			async (args) => wrap(() => getAvailableTemplates(args.type ?? undefined)),
 		),
 
+		// --- Analytics Tools ---
+		tool(
+			"get_volume",
+			"Returns total training volume (tonnage, sets, reps) per lift for a given time period.",
+			{
+				lift: liftEnum.optional().describe("Filter by lift. Omit for all lifts."),
+				period: z
+					.enum(["week", "month", "3months", "6months", "year"])
+					.optional()
+					.describe("Time period to look back. Omit for all time."),
+			},
+			async (args) =>
+				wrap(() => getVolume(args.lift as Lift | undefined, args.period ?? undefined)),
+		),
+		tool(
+			"get_completion_stats",
+			"Returns workout completion rates — how many sessions were completed vs skipped, overall and per lift.",
+			{
+				lift: liftEnum.optional().describe("Filter by lift. Omit for all lifts."),
+				period: z
+					.enum(["week", "month", "3months", "6months", "year"])
+					.optional()
+					.describe("Time period to look back. Omit for all time."),
+			},
+			async (args) =>
+				wrap(() => getCompletionStats(args.lift as Lift | undefined, args.period ?? undefined)),
+		),
+		tool(
+			"get_e1rm_history",
+			"Returns estimated 1RM progression over time from AMRAP/PR sets. Shows how strength has trended across cycles.",
+			{
+				lift: liftEnum.optional().describe("Filter by lift. Omit for all lifts."),
+				period: z
+					.enum(["week", "month", "3months", "6months", "year"])
+					.optional()
+					.describe("Time period to look back. Omit for all time."),
+			},
+			async (args) =>
+				wrap(() => getE1rmHistory(args.lift as Lift | undefined, args.period ?? undefined)),
+		),
+		tool(
+			"get_tm_history",
+			"Returns training max progression over time for each lift, showing when and how TMs changed across cycles.",
+			{
+				lift: liftEnum.optional().describe("Filter by lift. Omit for all lifts."),
+			},
+			async (args) => wrap(() => getTmHistory(args.lift as Lift | undefined)),
+		),
+
 		// --- Setup Tools ---
 		tool(
 			"set_tested_1rm",
@@ -231,7 +289,7 @@ export const trainingServer = createSdkMcpServer({
 		),
 		tool(
 			"set_schedule",
-			"Maps a day of the week to a lift. Reports conflicts if another lift was on that day.",
+			"Maps a day of the week to a lift. Multiple lifts can share the same day. Reports what other lifts are already on that day.",
 			{
 				day: dayEnum,
 				lift: z.enum(["squat", "bench", "deadlift", "ohp", "none"]),

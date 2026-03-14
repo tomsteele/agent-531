@@ -192,10 +192,10 @@ Returns the full current state of the program.
     }
   },
   "schedule": {
-    "sunday": "squat",
-    "monday": "bench",
-    "wednesday": "deadlift",
-    "thursday": "ohp"
+    "sunday": ["squat"],
+    "monday": ["bench"],
+    "wednesday": ["deadlift"],
+    "thursday": ["ohp"]
   }
 }
 ```
@@ -490,26 +490,25 @@ Sets the tested 1RM for a lift and recalculates the training max based on the ac
 
 ### set_schedule
 
-Maps a day of the week to a lift. If the lift was previously on another day, that day is cleared. If another lift was on the target day, the user is warned and asked how to handle it.
+Maps a day of the week to a lift. Multiple lifts can share the same day (e.g., Squat + OHP on Monday). If the lift was previously on another day, that entry is removed. Each lift can only appear once in the schedule.
 
 **Parameters:**
 | Name | Type | Required | Description |
 |---|---|---|---|
 | day | string | yes | Day of the week (e.g., 'monday') |
-| lift | string | yes | 'squat', 'bench', 'deadlift', 'ohp', or 'none' to clear a day |
+| lift | string | yes | 'squat', 'bench', 'deadlift', 'ohp', or 'none' to clear all lifts from a day |
 
 **Returns:**
 ```json
 {
   "day": "thursday",
   "lift": "bench",
-  "previous_lift_on_day": "ohp",
   "previous_day_for_lift": "tuesday",
-  "conflict": true
+  "other_lifts_on_day": ["ohp"]
 }
 ```
 
-If `conflict` is true, Claude should ask the user what to do with the displaced lift (e.g., "OHP was on Thursday — where do you want it?").
+`other_lifts_on_day` lists lifts already scheduled on that day (omitted if none).
 
 ---
 

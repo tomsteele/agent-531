@@ -17,8 +17,9 @@ export function initSchema(): void {
 
     CREATE TABLE IF NOT EXISTS schedule (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      day_of_week TEXT NOT NULL UNIQUE CHECK (day_of_week IN ('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday')),
-      lift TEXT NOT NULL CHECK (lift IN ('squat', 'bench', 'deadlift', 'ohp'))
+      day_of_week TEXT NOT NULL CHECK (day_of_week IN ('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday')),
+      lift TEXT NOT NULL UNIQUE CHECK (lift IN ('squat', 'bench', 'deadlift', 'ohp')),
+      sort_order INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS lifts (

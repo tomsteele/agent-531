@@ -29,14 +29,16 @@ export function updateProgramState(updates: Partial<Omit<ProgramState, "id">>): 
 }
 
 export function getSchedule(): Schedule[] {
-	return getDb().query("SELECT * FROM schedule ORDER BY id").all() as Schedule[];
+	return getDb()
+		.query("SELECT * FROM schedule ORDER BY day_of_week, sort_order")
+		.all() as Schedule[];
 }
 
-function getLiftForDay(day: DayOfWeek): Lift | null {
-	const row = getDb().query("SELECT lift FROM schedule WHERE day_of_week = ?").get(day) as {
-		lift: Lift;
-	} | null;
-	return row ? row.lift : null;
+export function getLiftsForDay(day: DayOfWeek): Lift[] {
+	const rows = getDb()
+		.query("SELECT lift FROM schedule WHERE day_of_week = ? ORDER BY sort_order")
+		.all(day) as { lift: Lift }[];
+	return rows.map((r) => r.lift);
 }
 
 export function getDayForLift(lift: Lift): DayOfWeek | null {
@@ -49,19 +51,30 @@ export function getDayForLift(lift: Lift): DayOfWeek | null {
 export function setScheduleEntry(
 	day: DayOfWeek,
 	lift: Lift,
-): { previousLiftOnDay: Lift | null; previousDayForLift: DayOfWeek | null } {
+): { previousDayForLift: DayOfWeek | null; otherLiftsOnDay: Lift[] } {
 	const db = getDb();
-	const previousLiftOnDay = getLiftForDay(day);
 	const previousDayForLift = getDayForLift(lift);
 
-	// Remove existing entry for this lift (if on another day).
+	// Remove existing entry for this lift (each lift can only be on one day).
 	db.query("DELETE FROM schedule WHERE lift = ?").run(lift);
-	// Remove existing entry for this day.
-	db.query("DELETE FROM schedule WHERE day_of_week = ?").run(day);
-	// Insert new lift for the day.
-	db.query("INSERT INTO schedule (day_of_week, lift) VALUES (?, ?)").run(day, lift);
 
-	return { previousLiftOnDay, previousDayForLift };
+	// Determine sort_order: place after any existing lifts on this day.
+	const existing = getLiftsForDay(day);
+	const sortOrder = existing.length;
+
+	db.query("INSERT INTO schedule (day_of_week, lift, sort_order) VALUES (?, ?, ?)").run(
+		day,
+		lift,
+		sortOrder,
+	);
+
+	return { previousDayForLift, otherLiftsOnDay: existing };
+}
+
+export function removeScheduleEntry(lift: Lift): DayOfWeek | null {
+	const previousDay = getDayForLift(lift);
+	getDb().query("DELETE FROM schedule WHERE lift = ?").run(lift);
+	return previousDay;
 }
 
 export function clearScheduleDay(day: DayOfWeek): void {
@@ -198,4 +211,92 @@ export function getBestE1RM(lift: Lift): number | null {
 		.query("SELECT MAX(estimated_1rm) as best FROM prs WHERE lift = ?")
 		.get(lift) as { best: number | null } | null;
 	return row?.best ?? null;
+}
+
+export function getWorkoutLogs(lift?: Lift, since?: string): WorkoutLog[] {
+	const conditions: string[] = [];
+	const params: SQLValue[] = [];
+
+	if (lift) {
+		conditions.push("lift = ?");
+		params.push(lift);
+	}
+	if (since) {
+		conditions.push("date >= ?");
+		params.push(since);
+	}
+
+	const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+	return getDb()
+		.query(`SELECT * FROM workout_log ${where} ORDER BY date ASC, id ASC`)
+		.all(...params) as WorkoutLog[];
+}
+
+export function getCompletionCounts(
+	lift?: Lift,
+	since?: string,
+): { lift: Lift; completed: number; skipped: number }[] {
+	const conditions: string[] = [];
+	const params: SQLValue[] = [];
+
+	if (lift) {
+		conditions.push("lift = ?");
+		params.push(lift);
+	}
+	if (since) {
+		conditions.push("date >= ?");
+		params.push(since);
+	}
+
+	const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+	return getDb()
+		.query(
+			`SELECT lift,
+				SUM(CASE WHEN skipped = 0 THEN 1 ELSE 0 END) as completed,
+				SUM(CASE WHEN skipped = 1 THEN 1 ELSE 0 END) as skipped
+			FROM workout_log ${where}
+			GROUP BY lift
+			ORDER BY lift`,
+		)
+		.all(...params) as { lift: Lift; completed: number; skipped: number }[];
+}
+
+export function getE1rmEntries(
+	lift?: Lift,
+	since?: string,
+): {
+	date: string;
+	lift: Lift;
+	calculated_1rm: number;
+	amrap_weight: number;
+	amrap_reps: number;
+	cycle_id: number;
+}[] {
+	const conditions: string[] = ["calculated_1rm IS NOT NULL"];
+	const params: SQLValue[] = [];
+
+	if (lift) {
+		conditions.push("lift = ?");
+		params.push(lift);
+	}
+	if (since) {
+		conditions.push("date >= ?");
+		params.push(since);
+	}
+
+	const where = `WHERE ${conditions.join(" AND ")}`;
+	return getDb()
+		.query(
+			`SELECT date, lift, calculated_1rm, amrap_weight, amrap_reps, cycle_id
+			FROM workout_log ${where}
+			ORDER BY date ASC, id ASC`,
+		)
+		.all(...params) as {
+		date: string;
+		lift: Lift;
+		calculated_1rm: number;
+		amrap_weight: number;
+		amrap_reps: number;
+		cycle_id: number;
+	}[];
 }

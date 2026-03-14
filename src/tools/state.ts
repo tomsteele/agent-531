@@ -33,9 +33,12 @@ export function getProgramState() {
 		};
 	}
 
-	const scheduleMap: Record<string, string> = {};
+	const scheduleMap: Record<string, string[]> = {};
 	for (const entry of schedule) {
-		scheduleMap[entry.day_of_week] = entry.lift;
+		if (!scheduleMap[entry.day_of_week]) {
+			scheduleMap[entry.day_of_week] = [];
+		}
+		scheduleMap[entry.day_of_week].push(entry.lift);
 	}
 
 	return {

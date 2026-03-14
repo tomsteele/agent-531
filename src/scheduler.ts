@@ -33,21 +33,24 @@ export function startScheduler(): void {
 			const todayName = DAY_NAMES[new Date().getDay()];
 
 			if (state.phase_status === "active") {
-				const todaysLift = state.schedule[todayName] as Lift | undefined;
-				if (!todaysLift) {
+				const todaysLifts = (state.schedule[todayName] as Lift[] | undefined) ?? [];
+				if (todaysLifts.length === 0) {
 					console.log(`[scheduler] Rest day (${todayName}), no message`);
 					return;
 				}
 
-				const workout = getTodaysWorkout(todaysLift);
+				const workouts = todaysLifts.map((lift) => ({
+					lift,
+					workout: getTodaysWorkout(lift),
+				}));
 				const prompt = [
 					`Morning message. Here's today's pre-fetched data — format it for the user. No need to call get_program_state or get_todays_workout.`,
 					``,
 					`Program state:`,
 					JSON.stringify(state, null, 2),
 					``,
-					`Today's workout (${todaysLift}):`,
-					JSON.stringify(workout, null, 2),
+					`Today's workouts:`,
+					JSON.stringify(workouts, null, 2),
 				].join("\n");
 
 				const response = await runAgent(prompt);

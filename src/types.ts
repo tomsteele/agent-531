@@ -24,6 +24,7 @@ export interface Schedule {
 	id: number;
 	day_of_week: DayOfWeek;
 	lift: Lift;
+	sort_order: number;
 }
 
 export interface LiftRow {

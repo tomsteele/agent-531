@@ -1,6 +1,5 @@
 export type Lift = "squat" | "bench" | "deadlift" | "ohp";
 export type Phase = "leader" | "anchor";
-export type PhaseStatus = "active" | "pending_tm_bump" | "pending_deload_or_test";
 export type DayOfWeek =
 	| "sunday"
 	| "monday"
@@ -16,7 +15,7 @@ export interface ProgramState {
 	current_week: number;
 	current_phase: Phase;
 	leader_cycles_completed: number;
-	phase_status: PhaseStatus;
+	phase_status: "active" | "pending_tm_bump" | "pending_deload_or_test";
 	cycle_id: number;
 }
 

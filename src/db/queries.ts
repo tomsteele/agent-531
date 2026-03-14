@@ -34,7 +34,7 @@ export function getSchedule(): Schedule[] {
 		.all() as Schedule[];
 }
 
-export function getLiftsForDay(day: DayOfWeek): Lift[] {
+function getLiftsForDay(day: DayOfWeek): Lift[] {
 	const rows = getDb()
 		.query("SELECT lift FROM schedule WHERE day_of_week = ? ORDER BY sort_order")
 		.all(day) as { lift: Lift }[];
@@ -69,12 +69,6 @@ export function setScheduleEntry(
 	);
 
 	return { previousDayForLift, otherLiftsOnDay: existing };
-}
-
-export function removeScheduleEntry(lift: Lift): DayOfWeek | null {
-	const previousDay = getDayForLift(lift);
-	getDb().query("DELETE FROM schedule WHERE lift = ?").run(lift);
-	return previousDay;
 }
 
 export function clearScheduleDay(day: DayOfWeek): void {

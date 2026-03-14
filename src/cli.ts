@@ -31,8 +31,6 @@ const rl = createInterface({
 	output: process.stdout,
 });
 
-let sessionId: string | undefined;
-
 function prompt() {
 	rl.question("\nyou> ", async (input) => {
 		const trimmed = input.trim();
@@ -43,8 +41,7 @@ function prompt() {
 		}
 
 		try {
-			const result = await runAgent(trimmed, sessionId);
-			sessionId = result.sessionId;
+			const result = await runAgent(trimmed);
 			console.log(`\nagent> ${result.text}`);
 		} catch (err) {
 			console.error("Error:", err);

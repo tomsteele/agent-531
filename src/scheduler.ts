@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import { runAgent } from "./agent";
-import { clearSession, sendDM, setSessionId } from "./discord";
+import { clearSession, sendDM } from "./discord";
 import { getAvailableTemplates } from "./tools/query";
 import { getProgramState } from "./tools/state";
 import { getTodaysWorkout } from "./tools/workout";
@@ -57,8 +57,6 @@ export function startScheduler(): void {
 				if (response.text.trim()) {
 					await sendDM(response.text);
 				}
-				// Preserve session so user replies have context from the morning message.
-				setSessionId(response.sessionId);
 			} else {
 				// pending_tm_bump or pending_deload_or_test — agent formats the appropriate prompt
 				const parts = [
@@ -77,7 +75,6 @@ export function startScheduler(): void {
 				if (response.text.trim()) {
 					await sendDM(response.text);
 				}
-				setSessionId(response.sessionId);
 			}
 		} catch (err) {
 			console.error("[scheduler] Error running morning agent:", err);

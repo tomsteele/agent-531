@@ -5,19 +5,12 @@ import {
 	GatewayIntentBits,
 	Partials,
 } from "discord.js";
-import { runAgent } from "./agent";
+import { clearSession as clearAgentSession, runAgent } from "./agent";
 
 const ALLOWED_USER_ID = process.env.ALLOWED_USER_ID ?? "";
 
-// Session ID replaces conversation history — Agent SDK manages context.
-let currentSessionId: string | undefined;
-
 export function clearSession(): void {
-	currentSessionId = undefined;
-}
-
-export function setSessionId(id: string | undefined): void {
-	currentSessionId = id;
+	clearAgentSession();
 }
 
 const client = new Client({
@@ -77,8 +70,7 @@ client.on("messageCreate", (message: DiscordMessage) => {
 	processingLock = processingLock.then(async () => {
 		try {
 			await channel.sendTyping();
-			const response = await runAgent(message.content, currentSessionId);
-			currentSessionId = response.sessionId;
+			const response = await runAgent(message.content);
 			if (response.text.trim()) {
 				await sendToChannel(channel, response.text);
 			}

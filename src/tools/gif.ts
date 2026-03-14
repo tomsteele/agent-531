@@ -5,9 +5,7 @@ const GIPHY_RATING = (process.env.GIPHY_RATING ?? "pg") as Rating;
 
 const SUCCESS_GIFS_SEARCH_TERMS = (process.env.GIPHY_SUCCESS_SEARCH ?? "woo").split(",");
 
-const _DAILY_WORKOUT_GIFS = (process.env.GIPHY_DAILY_WORKOUT_SEARCH ?? "").split(",");
-
-type GiphyType = "gifs" | "stickers" | "text" | "videos";
+export type GiphyType = "gifs" | "stickers" | "text" | "videos";
 
 function randomElement<T>(arr: T[], fallback: T) {
 	if (!arr || arr.length === 0) {

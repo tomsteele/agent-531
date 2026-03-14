@@ -184,7 +184,7 @@ export function upsertPR(
 	reps: number,
 	estimated1rm: number,
 	date: string,
-): { isNew: boolean; previousBestReps: number | null } {
+): { type: "new_weight" | "rep_record" | "none"; previousBestReps: number | null } {
 	const db = getDb();
 	const existing = db
 		.query("SELECT * FROM prs WHERE lift = ? AND weight = ?")
@@ -195,15 +195,15 @@ export function upsertPR(
 			db.query(
 				"UPDATE prs SET best_reps = ?, estimated_1rm = ?, date = ? WHERE lift = ? AND weight = ?",
 			).run(reps, estimated1rm, date, lift, weight);
-			return { isNew: true, previousBestReps: existing.best_reps };
+			return { type: "rep_record", previousBestReps: existing.best_reps };
 		}
-		return { isNew: false, previousBestReps: existing.best_reps };
+		return { type: "none", previousBestReps: existing.best_reps };
 	}
 
 	db.query(
 		"INSERT INTO prs (lift, weight, best_reps, estimated_1rm, date) VALUES (?, ?, ?, ?, ?)",
 	).run(lift, weight, reps, estimated1rm, date);
-	return { isNew: true, previousBestReps: null };
+	return { type: "new_weight", previousBestReps: null };
 }
 
 export function getBestE1RM(lift: Lift): number | null {

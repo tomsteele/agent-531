@@ -22,10 +22,14 @@ Call `get_program_state()` and evaluate the current status.
 
 **If status is `pending_deload_or_test`:**
 - Tell the user the leader/anchor phase is complete
-- Ask: "Deload or TM test this week?"
-- If transitioning to anchor, also ask which anchor templates to use per lift
-- If transitioning to a new leader cycle, ask which leader templates to use per lift (or keep current)
-- Do NOT present a workout until this is resolved
+- Ask: "Deload, TM test, or 1RM test this week?"
+- Once the user chooses, present the 7th week workout for today's scheduled lift using `get_seventh_week_workout`
+- After the user reports results, log with `log_seventh_week_workout`
+- For TM tests: relay the validation — "Squat TM is solid — hit 4 at 315" or "OHP TM might be too high — only 2 at 155. Want to lower it?"
+- For 1RM tests: the tested_1rm is updated automatically. Ask if they want to recalculate TMs from the new tested max.
+- If TM is flagged too heavy, suggest lowering and wait for confirmation before using `bump_tm` with a negative amount
+- After all 4 lifts are done, ask for template selection and call `set_phase()` to transition
+- The user can also skip the 7th week entirely — just call `set_phase()` directly
 
 **If status is `active`:**
 - Check today's day of the week against the schedule
@@ -98,12 +102,12 @@ Wait for confirmation. Apply bumps per the user's response.
 
 **After TM bumps, if leader cycles >= 2:**
 ```
-That's 2 leader cycles done. Time for a deload or TM test before the anchor.
+That's 2 leader cycles done. Time for a 7th week before the anchor.
 
-Deload or TM test?
+Deload, TM test, or 1RM test?
 ```
 
-**After deload/TM test, transitioning to anchor:**
+**After 7th week is complete, transitioning to anchor:**
 ```
 Ready for the anchor cycle. Current templates:
 

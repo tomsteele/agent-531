@@ -24,7 +24,15 @@ import {
 	setWeek,
 	skipTmBump,
 } from "./state";
-import { getTodaysWorkout, logWorkout, rescheduleLift, skipLift, skipWeek } from "./workout";
+import {
+	getSeventhWeekWorkout,
+	getTodaysWorkout,
+	logSeventhWeekWorkout,
+	logWorkout,
+	rescheduleLift,
+	skipLift,
+	skipWeek,
+} from "./workout";
 
 const liftEnum = z.enum(["squat", "bench", "deadlift", "ohp"]);
 const dayEnum = z.enum([
@@ -121,6 +129,52 @@ export const trainingServer = createSdkMcpServer({
 				new_day: dayEnum.describe("The new day for the lift"),
 			},
 			async (args) => wrap(() => rescheduleLift(args.lift as Lift, args.new_day as DayOfWeek)),
+		),
+
+		// --- 7th Week Tools ---
+		tool(
+			"get_seventh_week_workout",
+			"Returns the prescribed 7th week workout (deload, TM test, or 1RM test) for a lift. Only works when status is pending_deload_or_test.",
+			{
+				lift: liftEnum,
+				type: z
+					.enum(["deload", "tm_test", "1rm_test"])
+					.describe(
+						"deload = light recovery (40/50/60%), tm_test = work up to TM for 3-5 reps, 1rm_test = work up to a true 1RM",
+					),
+			},
+			async (args) =>
+				wrap(() =>
+					getSeventhWeekWorkout(args.lift as Lift, args.type as "deload" | "tm_test" | "1rm_test"),
+				),
+		),
+		tool(
+			"log_seventh_week_workout",
+			"Logs a 7th week workout. For TM tests, validates the result and suggests TM adjustments. For 1RM tests, updates tested_1rm. Signals when all 4 lifts are done and phase transition is ready.",
+			{
+				lift: liftEnum,
+				type: z.enum(["deload", "tm_test", "1rm_test"]),
+				actual_results: z
+					.array(z.object({ weight: z.number(), reps: z.number() }))
+					.describe("Array of sets performed"),
+				test_reps: z
+					.int()
+					.optional()
+					.describe("Reps achieved on the test set (TM test) or the 1RM attempt"),
+				test_weight: z.number().optional().describe("Weight used on the test set or 1RM attempt"),
+				notes: z.string().optional(),
+			},
+			async (args) =>
+				wrap(() =>
+					logSeventhWeekWorkout(
+						args.lift as Lift,
+						args.type as "deload" | "tm_test" | "1rm_test",
+						args.actual_results as ActualSet[],
+						args.test_reps ?? undefined,
+						args.test_weight ?? undefined,
+						args.notes ?? undefined,
+					),
+				),
 		),
 
 		// --- State Tools ---

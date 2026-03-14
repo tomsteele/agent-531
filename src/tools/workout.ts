@@ -91,7 +91,10 @@ export function logWorkout(
 
 	// Calculate e1RM if AMRAP data provided
 	let calculated1rm: number | null = null;
-	let prResult: { isNew: boolean; previousBestReps: number | null } | null = null;
+	let prResult: {
+		type: "new_weight" | "rep_record" | "none";
+		previousBestReps: number | null;
+	} | null = null;
 
 	if (amrapReps && amrapWeight) {
 		calculated1rm = calculateE1RM(amrapWeight, amrapReps);
@@ -135,19 +138,22 @@ export function logWorkout(
 		weekAdvanceResult = advanceWeek();
 	}
 
+	const prType = prResult?.type ?? "none";
+
 	const result: Record<string, unknown> = {
 		logged: true,
 		date: today,
 		lift,
-		new_pr: prResult?.isNew ?? false,
+		pr: prType,
 	};
 
-	if (prResult?.isNew) {
+	if (prType !== "none") {
 		result.pr_details = {
+			type: prType,
 			weight: amrapWeight,
 			reps: amrapReps,
 			estimated_1rm: calculated1rm,
-			previous_best_reps: prResult.previousBestReps,
+			previous_best_reps: prResult?.previousBestReps ?? null,
 		};
 	}
 
@@ -238,6 +244,211 @@ export function skipWeek(reason?: string) {
 		new_status: newState.phase_status,
 		reason: reason ?? null,
 	};
+}
+
+type SeventhWeekType = "deload" | "tm_test" | "1rm_test";
+
+const SEVENTH_WEEK_SETS: Record<SeventhWeekType, { percentage: number; reps: string }[]> = {
+	deload: [
+		{ percentage: 40, reps: "5" },
+		{ percentage: 50, reps: "5" },
+		{ percentage: 60, reps: "5" },
+	],
+	tm_test: [
+		{ percentage: 70, reps: "5" },
+		{ percentage: 80, reps: "3" },
+		{ percentage: 90, reps: "1" },
+		{ percentage: 100, reps: "3-5" },
+	],
+	"1rm_test": [
+		{ percentage: 70, reps: "5" },
+		{ percentage: 80, reps: "3" },
+		{ percentage: 90, reps: "1" },
+		{ percentage: 100, reps: "1" },
+		{ percentage: 0, reps: "1" },
+	],
+};
+
+export function getSeventhWeekWorkout(lift: Lift, type: SeventhWeekType) {
+	const state = queries.getProgramState();
+
+	if (state.phase_status !== "pending_deload_or_test") {
+		return { error: "Program is not in pending_deload_or_test status." };
+	}
+
+	const liftData = queries.getLift(lift);
+	if (!liftData.training_max) {
+		return { error: `No training max set for ${lift}.` };
+	}
+
+	const trainingMax = liftData.training_max;
+	const sets = SEVENTH_WEEK_SETS[type];
+
+	const mainWork: PrescribedSet[] = sets.map((s) => ({
+		percentage: s.percentage,
+		weight: s.percentage > 0 ? calculateWeight(trainingMax, s.percentage) : 0,
+		reps: s.reps,
+	}));
+
+	// For 1RM test, the last set is "work up beyond TM" — mark it clearly.
+	if (type === "1rm_test") {
+		mainWork[mainWork.length - 1] = {
+			percentage: 0,
+			weight: 0,
+			reps: "1RM attempt",
+		};
+	}
+
+	return {
+		lift,
+		type,
+		training_max: trainingMax,
+		phase: state.current_phase,
+		main_work: mainWork,
+	};
+}
+
+export function logSeventhWeekWorkout(
+	lift: Lift,
+	type: SeventhWeekType,
+	actualResults: ActualSet[],
+	testReps?: number,
+	testWeight?: number,
+	notes?: string,
+) {
+	const state = queries.getProgramState();
+
+	if (state.phase_status !== "pending_deload_or_test") {
+		return { error: "Program is not in pending_deload_or_test status." };
+	}
+
+	// Check if already logged for 7th week (week=0).
+	if (queries.isLiftLoggedThisCycle(lift, 0, state.current_phase, state.cycle_id)) {
+		return { error: `${lift} is already logged for the 7th week.` };
+	}
+
+	const liftData = queries.getLift(lift);
+	const trainingMax = liftData.training_max ?? 0;
+	const today = new Date().toISOString().split("T")[0];
+
+	// Build prescribed from the hardcoded sets.
+	const sets = SEVENTH_WEEK_SETS[type];
+	const prescribed = JSON.stringify({
+		main: sets.map((s) => ({
+			percentage: s.percentage,
+			weight: s.percentage > 0 ? calculateWeight(trainingMax, s.percentage) : 0,
+			reps: s.reps,
+		})),
+	});
+
+	const templateName = `7th-week-${type}`;
+
+	// Handle test set validation and PR tracking.
+	let calculated1rm: number | null = null;
+	let tmValidation: { reps: number; weight: number; result: string; suggestion: string } | null =
+		null;
+	let prResult: {
+		type: "new_weight" | "rep_record" | "none";
+		previousBestReps: number | null;
+	} | null = null;
+
+	if (testReps && testWeight) {
+		calculated1rm = calculateE1RM(testWeight, testReps);
+
+		// Track as PR.
+		prResult = queries.upsertPR(lift, testWeight, testReps, calculated1rm, today);
+		const bestE1rm = queries.getBestE1RM(lift);
+		if (bestE1rm) {
+			queries.updateLift(lift, { estimated_1rm: bestE1rm });
+		}
+
+		if (type === "tm_test") {
+			if (testReps < 3) {
+				tmValidation = {
+					reps: testReps,
+					weight: testWeight,
+					result: "too_heavy",
+					suggestion: `Only ${testReps} rep${testReps === 1 ? "" : "s"} at TM. Consider lowering by 10-20 lbs.`,
+				};
+			} else if (testReps <= 4) {
+				tmValidation = {
+					reps: testReps,
+					weight: testWeight,
+					result: "solid",
+					suggestion: "TM is appropriate. Good to proceed.",
+				};
+			} else {
+				tmValidation = {
+					reps: testReps,
+					weight: testWeight,
+					result: "strong",
+					suggestion: `${testReps} reps at TM — strong. TM is well-calibrated.`,
+				};
+			}
+		} else if (type === "1rm_test") {
+			// For a 1RM test, update tested_1rm on the lift.
+			queries.updateLift(lift, { tested_1rm: testWeight });
+			tmValidation = {
+				reps: 1,
+				weight: testWeight,
+				result: "tested",
+				suggestion: `New tested 1RM: ${testWeight} lbs. TM can be recalculated from this.`,
+			};
+		}
+	}
+
+	queries.logWorkout({
+		date: today,
+		lift,
+		template: templateName,
+		week: 0,
+		phase: state.current_phase,
+		cycle_id: state.cycle_id,
+		prescribed,
+		actual: JSON.stringify(actualResults),
+		amrap_reps: testReps ?? null,
+		amrap_weight: testWeight ?? null,
+		calculated_1rm: calculated1rm,
+		skipped: 0,
+		notes: notes ?? null,
+	});
+
+	// Check if all 4 lifts are done for the 7th week.
+	const logged = queries.getLiftsLoggedThisWeek(0, state.current_phase, state.cycle_id);
+	const allLifts: Lift[] = ["squat", "bench", "deadlift", "ohp"];
+	const remaining = allLifts.filter((l) => !logged.has(l));
+
+	const result: Record<string, unknown> = {
+		logged: true,
+		date: today,
+		lift,
+		type,
+		all_lifts_complete: remaining.length === 0,
+	};
+
+	if (remaining.length > 0) {
+		result.lifts_remaining = remaining;
+	} else {
+		result.ready_for_phase_transition = true;
+	}
+
+	if (tmValidation) {
+		result.tm_validation = tmValidation;
+	}
+
+	const prType = prResult?.type ?? "none";
+	if (prType !== "none") {
+		result.pr = prType;
+		result.pr_details = {
+			type: prType,
+			weight: testWeight,
+			reps: testReps,
+			estimated_1rm: calculated1rm,
+			previous_best_reps: prResult?.previousBestReps ?? null,
+		};
+	}
+
+	return result;
 }
 
 export function rescheduleLift(lift: Lift, newDay: DayOfWeek) {
